@@ -1,0 +1,70 @@
+# Config file for automatic testing at travis-ci.org
+
+language: python
+
+matrix:
+  include:
+
+    - os: osx
+      language: generic
+      env:
+        - PYTHON_VERSION=3.5.5
+        - PYTHON_SHORT_VERSION=3.5
+
+    - os: osx
+      language: generic
+      env:
+        - PYTHON_VERSION=3.6.5
+        - PYTHON_SHORT_VERSION=3.6
+
+    - os: osx
+      language: generic
+      env:
+        - PYTHON_VERSION=3.7.2
+        - PYTHON_SHORT_VERSION=3.7
+
+cache:
+  directories:
+    - $HOME/.pyenv/versions/3.7.2
+    - $HOME/.pyenv/versions/3.6.5
+    - $HOME/.pyenv/versions/3.5.5
+    - $HOME/downloads
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then mkdir $HOME/bin; ln -s $(which pip2) $HOME/bin/pip; fi
+  - pip install scikit-ci==0.13.0 scikit-ci-addons==0.11.0
+  - ci_addons --install ../addons
+
+install:
+  - ci install
+
+script:
+  - ci test
+
+after_success:
+  - ci after_test
+
+before_deploy:
+  - sudo pip install twine  # Twine installation requires sudo to get access to /usr/local/man
+
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: twine upload dist/*.whl -u $PYPI_USER -p $PYPI_PASSWORD
+    on:
+      tags: true
+      condition: $TRAVIS_TAG =~ ^v?[0-9]+(\.[0-9]+)*(rc[0-9]+)?$ && $TRAVIS_REPO_SLUG == Radiomics/pyradiomics
+  - provider: script
+    script:
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+      bash miniconda.sh -b -p $HOME/miniconda;
+      hash -r;
+      export PATH=$HOME/miniconda/bin:$PATH;
+      conda config --set always_yes yes;
+      conda install gcc libgcc;
+      bash ./conda/configure_conda.sh;
+      conda build ./conda --python=$PYTHON_SHORT_VERSION --croot $HOME/conda-bld;
+      anaconda -t $ANACONDA_TOKEN upload -u Radiomics $HOME/conda-bld/osx-64/pyradiomics-*.tar.bz2 --force
+    on:
+      tags: true
+      condition: $TRAVIS_TAG =~ ^v?[0-9]+(\.[0-9]+)*(rc[0-9]+)?$ && $TRAVIS_REPO_SLUG == Radiomics/pyradiomics

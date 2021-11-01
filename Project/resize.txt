@@ -1,0 +1,4 @@
+from PIL import Image
+foo = Image.open(r'C:\Users\Pavan\Desktop\Project\image_2.jpg')
+foo = foo.resize((300,200),Image.ANTIALIAS)
+foo.save(r'C:\Users\Pavan\Desktop\Project\image_2.jpg',quality=95)
